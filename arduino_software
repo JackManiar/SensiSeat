@@ -1,0 +1,59 @@
+// C++ code
+// arduino based code for SensiSeat
+// tinkercad simulation located at 
+// https://www.tinkercad.com/things/bgPLBZeuaul-edd-project-schematic/editel?returnTo=https%3A%2F%2Fwww.tinkercad.com%2Fdashboard%2Fdesigns%2Fall&sharecode=soLo4zJBo_M2_l_mpBOiCei95_9b9ojoYWO6DL3zc0w
+// convert to esp32 when available
+
+// Pin Definitions
+const int PIN_FL = A0; // Front Left
+const int PIN_FR = A1; // Front Right
+const int PIN_BL = A2; // Back Left
+const int PIN_BR = A3; // Back Right
+const int SEAT_THRESHOLD = 6;
+
+void setup()
+{
+  pinMode(PIN_FL, INPUT);
+  pinMode(PIN_FR, INPUT);
+  pinMode(PIN_BL, INPUT);
+  pinMode(PIN_BR, INPUT);
+  Serial.begin(9600);
+}
+
+void loop()
+{
+  // 1. Read Raw Analog Values (0 - 1023)
+  int fl = analogRead(PIN_FL);
+  int fr = analogRead(PIN_FR);
+  int bl = analogRead(PIN_BL);
+  int br = analogRead(PIN_BR);
+
+  // 2. Calculate Total Pressure
+  float totalPressure = fl + fr + bl + br;
+
+  // 3. Only process if someone is actually sitting
+  if (totalPressure > SEAT_THRESHOLD) {
+
+    /* * X calculation: (Right Side - Left Side) / Total
+     
+Result: -1.0 (Full Left) to 1.0 (Full Right)*/
+  float x = -((fr + br) - (fl + bl)) / totalPressure;
+
+    /* * Y calculation: (Front Side - Back Side) / Total
+     
+Result: -1.0 (Full Back) to 1.0 (Full Front)*/
+  float y = -((fl + fr) - (bl + br)) / totalPressure;
+
+    // 4. Send formatted data to Processing
+    Serial.print("X_Coord:");
+    Serial.print(x, 3); // 3 decimal places for precision
+    Serial.print(",Y_Coord:");
+    Serial.println(y, 3);
+
+  } else {
+    // Optional: Send a "Zero" or "Empty" state
+    // Serial.println("X_Coord:0.000,Y_Coord:0.000");
+  }
+
+  delay(50); // 20Hz update rate is plenty for posture
+}
