@@ -1,0 +1,37 @@
+#include "HX711.h"
+
+// Pin definitions
+const int LOADCELL_DOUT_PIN = 5;
+const int LOADCELL_SCK_PIN = 18;
+
+HX711 scale;
+
+// This value is obtained by calibrating the scale with known weights
+// Start with 1.0 and adjust based on readings
+float calibration_factor = -7050.0; 
+
+void setup() {
+  Serial.begin(115200);
+  Serial.println("Initializing the scale...");
+
+  scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
+
+  // Reset the scale to 0 (make sure nothing is on the load cell now)
+  scale.set_scale();
+  scale.tare(); 
+
+  Serial.println("Scale ready. Place weight on it.");
+}
+
+void loop() {
+  // Update the calibration factor if you've found yours
+  scale.set_scale(calibration_factor); 
+
+  Serial.print("Reading: ");
+  Serial.print(scale.get_units(), 1); // 1 decimal place
+  Serial.println(" kg"); // or lbs, depending on your calibration
+
+  scale.power_down();             // Put the ADC to sleep
+  delay(500);                     // Wait a bit
+  scale.power_up();               // Wake it back up
+}
