@@ -63,7 +63,7 @@ def create_pressure_plot(weights):
     center_of_mass = (xNormalized, yNormalized)
     x_min, x_max = -1.0, 1.0
     y_min, y_max = -1.0, 1.0
-    radius=1.5
+    radius=.75
     sensor_radius = .3
     center = (0,0)
     interval = 0.5
@@ -75,29 +75,31 @@ def create_pressure_plot(weights):
     ax.set_aspect("equal")
     ax.grid(True, linestyle="--", color="#d3d3d3", alpha=0.8)
 
-    # Draw the seat cushion pressure area as a filled green oval
-    seat = Ellipse(xy=center, width=radius, height=radius * .8, angle=0,
+    seat = Ellipse(xy=center, width=radius*2, height=radius*2 * .8, angle=0,
                    facecolor="blue", alpha=0.3, edgecolor="black")
     ax.add_patch(seat)
 
-    tl_sensor = Ellipse(xy=polar(center,radius*.5,3*pi/4), width=sensor_radius,height=sensor_radius,
+    tl_sensor = Ellipse(xy=polar(center,radius,3*pi/4), width=sensor_radius,height=sensor_radius,
                         angle=0,facecolor='red',edgecolor='red',alpha=weights[0]/total_weight)
     
-    tr_sensor = Ellipse(xy=polar(center,radius*.5,pi/4), width=sensor_radius,height=sensor_radius,
+    tr_sensor = Ellipse(xy=polar(center,radius,pi/4), width=sensor_radius,height=sensor_radius,
                         angle=0,facecolor='red',edgecolor='red',alpha=weights[1]/total_weight)
     
-    bl_sensor = Ellipse(xy=polar(center,radius*.5,5*pi/4), width=sensor_radius,height=sensor_radius,
+    bl_sensor = Ellipse(xy=polar(center,radius,5*pi/4), width=sensor_radius,height=sensor_radius,
                         angle=0,facecolor='red',edgecolor='red',alpha=weights[2]/total_weight)
     
-    br_sensor = Ellipse(xy=polar(center,radius*.5,7*pi/4), width=sensor_radius,height=sensor_radius,
+    br_sensor = Ellipse(xy=polar(center,radius,7*pi/4), width=sensor_radius,height=sensor_radius,
                         angle=0,facecolor='red',edgecolor='red',alpha=weights[3]/total_weight)
     
     ax.add_patch(tl_sensor); ax.add_patch(tr_sensor); ax.add_patch(bl_sensor); ax.add_patch(br_sensor)
 
 
+    # temporary posture quality check, can be refined to a more complex condition
+    bad_posture = (center_of_mass[0]**2 + center_of_mass[1]**2)**(.5) > .75*radius
+
     # Draw the center of mass point
-    ax.scatter([center_of_mass[0]], [center_of_mass[1]], color="black", s=100, zorder=5)
-    ax.text(center_of_mass[0] + 0.05, center_of_mass[1] + 0.05, "Center of Mass", fontsize=10, color="black")
+    ax.scatter([center_of_mass[0]], [center_of_mass[1]], color="red" if bad_posture else"black", s=100, zorder=5)
+    ax.text(center_of_mass[0] + 0.05, center_of_mass[1] + 0.05, "Center of Mass" + ("(UNHEALTHY)" if bad_posture else ""), fontsize=10, color="red" if bad_posture else"black")
 
     ax.set_xlabel("X position")
     ax.set_ylabel("Y position")

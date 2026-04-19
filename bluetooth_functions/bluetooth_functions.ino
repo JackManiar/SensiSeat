@@ -1,6 +1,8 @@
 #include <ArduinoBLE.h>
 #define LED_BUILTIN 2
 
+// Holds the packet of information to be sent to the companion app
+// Condensing into a struct allows for effeciency and modularity 
 typedef struct posture_packet_t {
   float weightFrontLeft;
   float weightFrontRight;
@@ -8,11 +10,14 @@ typedef struct posture_packet_t {
   float weightBackRight; 
 } posture_packet_t;
 
-
+// Groups the info into a BLE service
 BLEService postureService("FEED");
+// The BLE characteristic holding the struct
 BLECharacteristic postureInfo("F00D", BLERead | BLENotify, sizeof(posture_packet_t), true);
+// reference to the connected BLE central
 BLEDevice central;
 
+// Call to setup BLE and advertise
 void BLE_setup()
 {
   BLE.setLocalName("SensiSeat");
@@ -23,7 +28,7 @@ void BLE_setup()
   BLE.advertise();
 }
 
-// blocking connect with global var "central"
+// blocking call to connect to a BLE central. Uses global var "central"
 void BLE_connect()
 {
   do
@@ -36,14 +41,14 @@ void BLE_connect()
   Serial.println(central.address());
 }
 
-
+// Updates the BLE posture info characteristic with a new struct
 void BLE_updatePosture(posture_packet_t info)
 {
-  Serial.print("Updating posture on BLE");
+  // Serial.print("Updating posture on BLE");
   postureInfo.writeValue(&info, sizeof(info));
 }
 
-// demo setup -- REMOVE WHEN DONE
+// demo arduino setup() function -- REMOVE WHEN DONE
 void setup() {
   Serial.begin(9600);    
   while (!Serial);
@@ -62,7 +67,7 @@ void setup() {
   digitalWrite(LED_BUILTIN, HIGH);
   Serial.println("Bluetooth® device active, waiting for connections...");
 }
-//demo loop -- REMOVE WHEN DONE
+//demo arduino loop() function -- REMOVE WHEN DONE
 void loop() {
   long previousMillis = 0;
   while (central.connected()) {
