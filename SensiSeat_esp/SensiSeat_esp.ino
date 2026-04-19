@@ -1,3 +1,15 @@
+#include <ArduinoBLE.h>
+#include "esp_system.h"
+
+#define LED_BUILTIN 2
+
+typedef struct posture_packet_t {
+  float weightFrontLeft;
+  float weightFrontRight;
+  float weightBackLeft;
+  float weightBackRight; 
+} posture_packet_t;
+
 const int DOUT_FRONT_LEFT  = 25;
 const int DOUT_FRONT_RIGHT = 32;
 const int DOUT_BACK_LEFT   = 22;
@@ -20,6 +32,43 @@ const float BOARD_DEPTH_MM = 400.0;
 
 const float NOISE_THRESHOLD_KG = 0.10;
 const int TARE_SAMPLES = 15;
+
+// Groups the info into a BLE service
+BLEService postureService("FEED");
+// The BLE characteristic holding the struct
+BLECharacteristic postureInfo("F00D", BLERead | BLENotify, sizeof(posture_packet_t), true);
+// reference to the connected BLE central
+BLEDevice central;
+
+void BLE_setup()
+{
+  BLE.setLocalName("SensiSeat");
+  BLE.setAdvertisedService(postureService); 
+  postureService.addCharacteristic(postureInfo);
+  BLE.addService(postureService); 
+
+  BLE.advertise();
+}
+
+// blocking call to connect to a BLE central. Uses global var "central"
+void BLE_connect()
+{
+  do
+  {
+    central = BLE.central();       
+  } while (!central);
+
+  Serial.print("Connected to central: ");
+  
+  Serial.println(central.address());
+}
+
+// Updates the BLE posture info characteristic with a new struct
+void BLE_updatePosture(posture_packet_t info)
+{
+  // Serial.print("Updating posture on BLE");
+  postureInfo.writeValue(&info, sizeof(info));
+}
 
 bool allSensorsReady() {
   return digitalRead(DOUT_FRONT_LEFT)  == LOW &&
@@ -108,7 +157,21 @@ void setup() {
 
   digitalWrite(HX_SCK_PIN, LOW);
 
-  delay(2000);
+  pinMode(LED_BUILTIN, OUTPUT); 
+
+  // begin initialization
+  if (!BLE.begin()) {
+    Serial.println("starting Bluetooth® Low Energy module failed!");
+
+    while (1);
+  }
+
+  BLE_setup();
+  Serial.println("Bluetooth® device active, waiting for connections...");
+  BLE_connect();
+  digitalWrite(LED_BUILTIN, HIGH);
+
+  delay(1000);
   Serial.println("Keep the seat empty. Taring will start in 3 seconds...");
   delay(3000);
 
@@ -116,6 +179,8 @@ void setup() {
 
   Serial.println("Tare complete.");
   Serial.println("Starting readings...");
+
+
 }
 
 void loop() {
@@ -140,6 +205,19 @@ void loop() {
 
     xMillimeters = xNormalized * (BOARD_WIDTH_MM / 2.0);
     yMillimeters = yNormalized * (BOARD_DEPTH_MM / 2.0);
+  }
+
+  posture_packet_t packet;
+  packet.weightBackLeft = weightBackLeft;
+  packet.weightBackRight = weightBackRight;
+  packet.weightFrontLeft = weightFrontLeft;
+  packet.weightFrontRight = weightFrontRight;
+  BLE_updatePosture(packet);
+
+  if (!central.connected())
+  {
+    Serial.println("Central Disconnected. Restarting.");
+    esp_restart();
   }
 
   // Serial.println("--------------------------------------------------");
@@ -219,10 +297,10 @@ void loop() {
   // Serial.print(" kg | Back Right: "); Serial.print(weightBackRight, 2);
   // Serial.println(" kg");
 
-  Serial.print("FL raw: "); Serial.print(rawFrontLeft);
-Serial.print(" | FR raw: "); Serial.print(rawFrontRight);
-Serial.print(" | BL raw: "); Serial.print(rawBackLeft);
-Serial.print(" | BR raw: "); Serial.println(rawBackRight);
+  // Serial.print("FL raw: "); Serial.print(rawFrontLeft);
+  // Serial.print(" | FR raw: "); Serial.print(rawFrontRight);
+  // Serial.print(" | BL raw: "); Serial.print(rawBackLeft);
+  // Serial.print(" | BR raw: "); Serial.println(rawBackRight);
 
   delay(500);
 }
